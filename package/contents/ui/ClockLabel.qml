@@ -38,7 +38,8 @@ Rectangle {
     property bool showTimezone: true
     property bool showTZCode: true
     property double fontScale: 1
-
+    //property var formatType: Locale.LongFormat
+    property var formatType: Locale.ShortFormat
 
     color: "red"
 
@@ -130,7 +131,7 @@ Rectangle {
         }
 
         if (showDate) {
-            timeFormat += '\n' + Qt.locale().dateFormat(Locale.LongFormat)
+            timeFormat += '\n' + Qt.locale().dateFormat(formatType)
         }
     }
 
