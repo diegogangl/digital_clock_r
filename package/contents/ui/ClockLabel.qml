@@ -24,24 +24,37 @@ import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.components 2.0 as PlasmaComponents
 
 
-Rectangle {
+Item {
     id: main
 
     // Internal
     property string timeFormat
+    property int longestLine
 
 
     // Settings (placehodlers)
-    property bool showSeconds: false
+    property bool showSeconds: true
     property bool show24hs: true
     property bool showDate: true
-    property bool showTimezone: true
+    property bool showTimezone: false
     property bool showTZCode: true
     property double fontScale: 1
-    //property var formatType: Locale.LongFormat
     property var formatType: Locale.ShortFormat
+    property string fontFamily: theme.defaultFont.family
 
-    color: "red"
+
+    // Testing stuff
+    //property var formatType: Locale.LongFormat
+    //property string fontFamily: "Open Sans"
+    //property string fontFamily: "SMD"
+    //property string fontFamily: "Hexa"
+    //property string fontFamily: "Inconsolata"
+    //property string fontFamily: "Amaranth"
+    //property string fontFamily: "Hack"
+    //property string fontFamily: "Meslo LG S DZ"
+    //property string fontFamily: "Fira Code"
+    //color: "red"
+
 
     states: [
         State {
@@ -55,6 +68,9 @@ Rectangle {
                 Layout.minimumWidth: clock.paintedWidth
             }
 
+            /**
+             * No fancy formula here, the user can just resize the widget
+             */
             PropertyChanges {
                 target: clock
 
@@ -75,11 +91,42 @@ Rectangle {
                 Layout.minimumWidth: clock.paintedWidth
             }
 
+            /**
+             * The formula for the font size here is h * (s/l)
+             *
+             * h -> the parent's height
+             * s -> font scale (1..0)
+             * l -> line count
+             *
+             * The line count change just looks good
+             */
             PropertyChanges {
                 target: clock
 
                 font.pixelSize: parent.height * (fontScale / lineCount)
-                lineHeight: 1 / Math.max(1, lineCount)
+                lineHeight: lineCount > 1 ? 1: 0.75
+            }
+        },
+
+        State {
+            name: "vertical"
+            when: plasmoid.formFactor == PlasmaCore.Types.Vertical
+
+            PropertyChanges {
+                target: main
+            }
+
+            /**
+             * The formula for the font size here is (p / (c/2)) * s
+             *
+             * p -> the parent's width
+             * c -> character count of the longest line
+             * s -> font scale (1..0)
+             */
+            PropertyChanges {
+                target: clock
+
+                font.pixelSize: (parent.width / (longestLine / 2)) * fontScale
             }
         }
     ]
@@ -100,11 +147,11 @@ Rectangle {
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
 
-        minimumPixelSize: theme.smallestFont.pixelSize
-        font.family: theme.defaultFont.family
-
         anchors.fill: parent
+        font.family: fontFamily
+        minimumPixelSize: theme.smallestFont.pixelSize
     }
+
 
     /**
      * This function updates the label's text. It's called when time
@@ -135,9 +182,25 @@ Rectangle {
         }
     }
 
+
+    /**
+     * This function updates the longest line for vertical layouts. It's
+     * called everytime the format is changed (maybe when the date
+     * changes too?).
+     */
+    function refreshLongestLineLength() {
+        var lines = clock.text.split('\n');
+        var diff = lines.sort(function (a, b) { return b.length - a.length; })
+        var longest = diff[0];
+
+        longestLine = longest.length;
+    }
+
+
     Component.onCompleted: {
         refreshFormat();
         refreshClock();
+        refreshLongestLineLength();
         dataSource.onDataChanged.connect(refreshClock);
     }
 }
